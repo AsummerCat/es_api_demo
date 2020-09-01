@@ -14,13 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.websocket.ClientEndpointConfig;
 import java.util.List;
 
+/**
+ * JPA方式的使用es
+ */
 @RestController
-@RequestMapping("hello")
-public class HelloController {
+@RequestMapping("jpa")
+public class JpaController {
 	@Autowired
 	private PersonRepository personRepository;
-	@Autowired
-	private RestHighLevelClient restHighLevelClient;
 
 	@RequestMapping("findByName")
 	public void findByName() {
