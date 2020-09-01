@@ -8,11 +8,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.RestClients;
 
-//@Data
-//@Configuration
-//@ConfigurationProperties(prefix = "elastic")
-//public class ElasticsearchConfig {
-//
+@Data
+@Configuration
+@ConfigurationProperties(prefix = "elastic")
+public class ElasticsearchConfig {
+
 //    private String host;
 //    private Long connectTimeout;
 //    private Long socketTimeout;
@@ -28,4 +28,4 @@ import org.springframework.data.elasticsearch.client.RestClients;
 //                .build();
 //        return RestClients.create(clientConfiguration).rest();
 //    }
-//}
+}

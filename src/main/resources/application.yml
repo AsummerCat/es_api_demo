@@ -14,3 +14,7 @@ spring:
     rest:    # 低级连接器
       uris: 127.0.0.1:9200
 
+#elastic:
+#  host: 127.0.0.1:9200
+#  connectTimeout: 10
+#  socketTimeout: 5
