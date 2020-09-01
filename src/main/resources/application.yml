@@ -1,0 +1,16 @@
+server:
+  port: 9091
+spring:
+  application:
+    name: es_api_demo
+  data:
+    elasticsearch:
+      client:
+        reactive:   # 高级连接器
+          endpoints: 127.0.0.1:9200
+          connection-timeout: 10  #链接到es的超时时间，毫秒为单位，默认10秒（10000毫秒）
+          socket-timeout: 5        #读取和写入的超时时间，单位为毫秒，默认5秒（5000毫秒）
+  elasticsearch:
+    rest:    # 低级连接器
+      uris: 127.0.0.1:9200
+
