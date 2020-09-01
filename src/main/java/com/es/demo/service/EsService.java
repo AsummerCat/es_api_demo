@@ -1,6 +1,9 @@
 package com.es.demo.service;
 
 import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.MultiGetItemResponse;
+import org.elasticsearch.action.get.MultiGetRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
@@ -74,4 +77,29 @@ public class EsService {
 
     }
 
+
+    /**
+     * 一次性GET多条数据 不存在则为null
+     * @throws IOException
+     */
+    public void multiGetExists() throws IOException {
+        MultiGetRequest items = new MultiGetRequest();
+        //拼接数据
+        items.add(new MultiGetRequest.Item("user","1"));
+        items.add(new MultiGetRequest.Item("user","2"));
+        items.add(new MultiGetRequest.Item("user","3"));
+        items.add(new MultiGetRequest.Item("user","4"));
+        //GET 多条数据
+        MultiGetItemResponse[] responses = restHighLevelClient.mget(items, RequestOptions.DEFAULT).getResponses();
+        //返回的结果如果是存在的 输出json
+        for (MultiGetItemResponse respons : responses) {
+            GetResponse res = respons.getResponse();
+            //document是否存在
+            if(res.isExists()){
+                String json=res.getSourceAsString();
+                System.out.println(json);
+            }
+        }
+
+    }
 }

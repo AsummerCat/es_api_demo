@@ -20,15 +20,35 @@ public class NativeController {
 	public void findByName() {
 	}
 
-
+	/**
+	 * 新增
+	 * @throws IOException
+	 */
 	@RequestMapping("addData")
 	public void addData() throws IOException {
 		esService.addData();
 		System.out.println("插入成功");
 	}
+
+	/**
+	 * 更新
+	 * @throws IOException
+	 */
 	@RequestMapping("updateData")
 	public void save() throws IOException {
 		esService.updateData();
 		System.out.println("插入或更新成功");
 	}
+
+	/**
+	 * 一次性GET多条数据 不存在则为null
+	 * @throws IOException
+	 */
+	@RequestMapping("multiGetExists")
+	public void multiGetExists() throws IOException {
+		esService.multiGetExists();
+		System.out.println("一次性GET多条数据 不存在则为null");
+	}
+
+
 }
