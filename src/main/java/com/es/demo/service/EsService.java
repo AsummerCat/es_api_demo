@@ -535,8 +535,11 @@ public class EsService {
         SearchRequest searchRequest = new SearchRequest("user");
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
 
-        //创建聚合语法  聚合的name  和聚合的字段
+        //创建聚合语法   求各个年龄段分组
         TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.terms("by_age").field("age");
+        //求平均年龄
+// TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.avg("avg_age").field("age");
+
         //添加到查询源中
         sourceBuilder.aggregation(termsAggregationBuilder);
         sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
