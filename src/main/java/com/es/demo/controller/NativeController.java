@@ -50,5 +50,35 @@ public class NativeController {
 		System.out.println("一次性GET多条数据 不存在则为null");
 	}
 
+	/**
+	 * 批处理插入
+	 * @throws IOException
+	 */
+	@RequestMapping("bulkBatchAdd")
+	public void bulkBatchAdd() throws IOException {
+		esService.bulkBatchAdd();
+		System.out.println("bulk批处理插入");
+	}
+
+	/**
+	 * 批处理更新
+	 * @throws IOException
+	 */
+	@RequestMapping("bulkBatchUpdate")
+	public void bulkBatchUpdate() throws IOException {
+		esService.bulkBatchUpdate();
+		System.out.println("bulk批处理更新");
+	}
+
+	/**
+	 * 批处理删除
+	 * @throws IOException
+	 */
+	@RequestMapping("bulkBatchDelete")
+	public void bulkBatchDelete() throws IOException {
+		esService.bulkBatchDelete();
+		System.out.println("bulk批处理删除");
+	}
+
 
 }
