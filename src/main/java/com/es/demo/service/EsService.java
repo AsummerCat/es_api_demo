@@ -38,6 +38,12 @@ import org.elasticsearch.script.mustache.SearchTemplateResponse;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedLongTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
@@ -520,8 +526,48 @@ public class EsService {
 
 
     /**
-     *
+     * 聚合查询
      */
+    public void aggSearch() {
+        //创建查询request 并且配上index
+        SearchRequest searchRequest = new SearchRequest("user");
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+
+        //创建聚合语法  聚合的name  和聚合的字段
+        TermsAggregationBuilder termsAggregationBuilder = AggregationBuilders.terms("by_age").field("age");
+        //添加到查询源中
+        sourceBuilder.aggregation(termsAggregationBuilder);
+        sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
+        //添加到查询request
+        searchRequest.source(sourceBuilder);
+
+        try {
+            //查询
+            SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            //获取当前聚合搜索结果
+            Aggregations aggregations = searchResponse.getAggregations();
+            //获取当前层级的聚合
+            Map<String, Aggregation> stringAggregationMap = aggregations.asMap();
+            //获取指定聚合名称的结果集
+            ParsedLongTerms parsedLongTerms = (ParsedLongTerms) stringAggregationMap.get("by_age");
+            //遍历结果集渲染的列表
+            List<? extends Terms.Bucket> buckets = parsedLongTerms.getBuckets();
+
+            Map<Integer, Long> map = new HashMap<>();
+            //遍历聚合查询的结果
+            for (Terms.Bucket bucket : buckets) {
+                long docCount = bucket.getDocCount();//个数
+                Number keyAsNumber = bucket.getKeyAsNumber();//年龄
+                System.err.println(keyAsNumber + "岁的有" + docCount + "个");
+                map.put(keyAsNumber.intValue(), docCount);
+            }
+            System.out.println("聚合查询成功");
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     /**
