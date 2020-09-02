@@ -1,7 +1,9 @@
 package com.es.demo.service;
 
 import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.get.MultiGetItemResponse;
@@ -207,15 +209,33 @@ public class EsService {
 	 */
 	public void bulkBatchDelete() throws IOException {
 		BulkRequest bulkRequest = new BulkRequest();
+		 //构造插入的数据
+        bulkRequest.add(new IndexRequest("user") //获取index
+		        //获取id
+		        .id("1")
+		        //构造field
+		        .source(XContentFactory.jsonBuilder()
+				        .startObject()
+				        .field("name", "小明")
+				        .field("age", 18)
+				        .endObject()
+		        ));
 		//构造删除的数据
-		bulkRequest.add(new UpdateRequest("user", "1")
-				.doc(XContentFactory.jsonBuilder()
-						.startObject()
-						.field("age", 21)
-						.endObject()));
+		bulkRequest.add(new DeleteRequest("user", "1"));
 		bulkRequest.add(new DeleteRequest("user", "2"));
-		bulkRequest.add(new DeleteRequest("user", "3"));
-		restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+		BulkResponse bulk = restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
+		//返回结果处理
+		BulkItemResponse[] items = bulk.getItems();
+		for (BulkItemResponse item : items) {
+			String statueName = item.getResponse().getResult().name();
+			String id = item.getResponse().getId();
+			if("DELETED".equals(statueName)){
+				System.out.println("id-->"+id+"<--"+"删除成功");
+			}
+			if("NOT_FOUND".equals(statueName)){
+				System.out.println("id-->"+id+"<--"+"删除失败 未找到相关数据");
+			}
+		}
 	}
 
 }
