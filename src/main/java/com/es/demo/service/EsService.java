@@ -374,6 +374,9 @@ public class EsService {
 		HighlightBuilder.Field highlightTitle = new HighlightBuilder.Field("name");
 		//字段高亮显示类型，默认用标签包裹高亮字词
 //		highlightTitle.highlighterType("unified");
+		//自定义高亮显示
+		highlightTitle.preTags("<span style='color:red'>");
+		highlightTitle.postTags("</span>");
 		highlightBuilder.field(highlightTitle);
 		searchSourceBuilder.highlighter(highlightBuilder);
 
