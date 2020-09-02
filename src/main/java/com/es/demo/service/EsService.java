@@ -1,5 +1,7 @@
 package com.es.demo.service;
 
+import com.es.demo.index.Person;
+import org.apache.commons.beanutils.BeanUtilsBean;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -9,15 +11,32 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.get.MultiGetItemResponse;
 import org.elasticsearch.action.get.MultiGetRequest;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.search.ClearScrollRequest;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.Scroll;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 /**
@@ -238,5 +257,70 @@ public class EsService {
 		}
 	}
 
+
+	/**
+	 * 基于scroll进行滚动查询
+	 */
+	public void scrollQuery() throws IOException, InvocationTargetException, IllegalAccessException {
+
+		//1.建立查询索引
+		SearchRequest searchRequest =new SearchRequest("user");
+
+		//2.设置scroll的参数
+		Scroll scroll = new Scroll(timeValueMillis(100));
+		searchRequest.scroll(scroll);
+
+		//3.封装查询条件
+		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+//		searchSourceBuilder.query(QueryBuilders.matchQuery("name", "小明"));
+		searchSourceBuilder.query(QueryBuilders.matchAllQuery());
+		//限制单次批量查询的条数
+		searchSourceBuilder.size(1); //设定每次返回多少条数据
+		//设置返回字段和排除字段
+		searchSourceBuilder.fetchSource(new String[]{"name","age","id"},null);
+		//排序
+		searchSourceBuilder.sort("age", SortOrder.DESC);
+		searchRequest.source(searchSourceBuilder);
+
+		//4.进行搜索
+		SearchResponse searchResponse = restHighLevelClient.search(searchRequest,RequestOptions.DEFAULT);
+		//获取到scrollId
+		String scrollId = searchResponse.getScrollId();
+		SearchHit[] hits = searchResponse.getHits().getHits();
+		List<SearchHit> hitsList = Arrays.stream(hits).collect(Collectors.toList());
+		List<SearchHit> resultSearchHit = new ArrayList<>(hitsList);
+
+		//5.递归查询并且获取赋值的内容
+		while (!CollectionUtils.isEmpty(hitsList)) {
+			//封装scrollId 接着查询
+			SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollId);
+			searchScrollRequest.scroll(scroll);
+
+			SearchResponse nextResponse = restHighLevelClient.scroll(searchScrollRequest,RequestOptions.DEFAULT);
+			scrollId = nextResponse.getScrollId();
+			hits = nextResponse.getHits().getHits();
+			hitsList = Arrays.stream(hits).collect(Collectors.toList());
+			resultSearchHit.addAll(hitsList);
+		}
+
+		//6.及时清除es快照，释放资源
+		ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+		clearScrollRequest.addScrollId(scrollId);
+		boolean succeeded=restHighLevelClient.clearScroll(clearScrollRequest,RequestOptions.DEFAULT).isSucceeded();
+		System.out.println("succeeded:" + succeeded);
+
+		//7.最后获取到的数据进行遍历转义成对象
+		ArrayList<Person> adminLogs = new ArrayList<>();
+		for (SearchHit hit : resultSearchHit) {
+			Map<String, Object> sourceAsMap = hit.getSourceAsMap();
+			Person person = new Person();
+			BeanUtilsBean.getInstance().populate(person,sourceAsMap);
+			adminLogs.add(person);
+		}
+
+		//循环展示数据
+		adminLogs.forEach(System.out::println);
+
+	}
 }
 

@@ -1,11 +1,13 @@
 package com.es.demo.index;
 
 import lombok.Data;
+import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
 @Document(indexName = "user")
 @Data
+@ToString
 public class Person {
 
     /**

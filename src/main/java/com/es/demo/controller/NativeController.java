@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * 原生API的使用
@@ -80,5 +81,16 @@ public class NativeController {
 		System.out.println("bulk批处理删除");
 	}
 
+	/**
+	 * 基于scroll进行滚动查询
+	 * @throws IOException
+	 * @throws InvocationTargetException
+	 * @throws IllegalAccessException
+	 */
+	@RequestMapping("scrollQuery")
+	public void scrollQuery() throws IOException, InvocationTargetException, IllegalAccessException {
+		esService.scrollQuery();
+		System.out.println("基于scroll进行滚动查询");
+	}
 
 }
