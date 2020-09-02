@@ -152,4 +152,13 @@ public class NativeController {
     }
 
 
+    /**
+     * 经纬度查询
+     */
+    @RequestMapping("locationSearch")
+    public void locationSearch() throws IOException {
+        esService.locationSearch();
+    }
+
+
 }

@@ -3,6 +3,7 @@ package com.es.demo.service;
 import com.alibaba.fastjson.JSONObject;
 import com.es.demo.index.Person;
 import org.apache.commons.beanutils.BeanUtilsBean;
+import org.apache.commons.collections4.MapUtils;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
@@ -27,6 +28,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.text.Text;
+import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -569,6 +571,47 @@ public class EsService {
         }
     }
 
+    /**
+     * 经纬度查询 location
+     */
+    public void locationSearch() {
+
+        //拼接条件
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+//        QueryBuilder isdeleteBuilder = QueryBuilders.termQuery("isdelete", false);
+        // 以某点为中心，搜索指定范围   字段名称
+        GeoDistanceQueryBuilder distanceQueryBuilder = new GeoDistanceQueryBuilder("location");
+        //构建一个带你
+        distanceQueryBuilder.point(42.12D, -73);
+        //查询单位：km
+        distanceQueryBuilder.distance(100, DistanceUnit.KILOMETERS);
+        boolQueryBuilder.filter(distanceQueryBuilder);
+//        boolQueryBuilder.must(isdeleteBuilder);
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(boolQueryBuilder);
+
+        //查询Request 附带index
+        SearchRequest searchRequest = new SearchRequest("my_index");
+        searchRequest.source(searchSourceBuilder);
+
+        try {
+            SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            SearchHits hits = searchResponse.getHits();
+            List<SearchHit> hitsList = Arrays.stream(hits.getHits()).collect(Collectors.toList());
+            for (int i = 0; i < hitsList.size(); i++) {
+                Map<String, Object> sourceAsMap = hitsList.get(i).getSourceAsMap();
+                System.out.print("输出语句:" + sourceAsMap.get("text") + "---");
+                //获取具体坐标
+                Map<String, Double> localtion = (Map<String, Double>) MapUtils.getMap(sourceAsMap, "location");
+                System.out.print("当前位置" + localtion.get("lat") + "," + localtion.get("lon"));
+                System.out.println();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * ***************************************************************************************************************
@@ -610,6 +653,20 @@ public class EsService {
          */
         //范围查询
         RangeQueryBuilder rangeQueryBuilder = QueryBuilders.rangeQuery("birthday").from("1991-01-01").to("2010-10-10").format("yyyy-MM-dd");
+        //闭区间查询
+        QueryBuilder queryBuilder0 = QueryBuilders.rangeQuery("fieldName").from("fieldValue1").to("fieldValue2");
+        //开区间查询
+        QueryBuilder queryBuilder1 = QueryBuilders.rangeQuery("fieldName").from("fieldValue1").to("fieldValue2").includeUpper(false).includeLower(false);//默认是true，也就是包含
+        //大于
+        QueryBuilder queryBuilder2 = QueryBuilders.rangeQuery("fieldName").gt("fieldValue");
+        //大于等于
+        QueryBuilder queryBuilder3 = QueryBuilders.rangeQuery("fieldName").gte("fieldValue");
+        //小于
+        QueryBuilder queryBuilder4 = QueryBuilders.rangeQuery("fieldName").lt("fieldValue");
+        //小于等于
+        QueryBuilder queryBuilder5 = QueryBuilders.rangeQuery("fieldName").lte("fieldValue");
+
+
         //精准查询
         TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("name.keyword", "小明");
         //前缀查询
