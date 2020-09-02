@@ -351,6 +351,8 @@ public class EsService {
 		params.put("value", "小明");
 		params.put("size", 5);
 		request.setScriptParams(params);
+		//添加需要搜索的index
+		request.setRequest(new SearchRequest("user"));
 		//搜索
 		SearchTemplateResponse searchTemplateResponse = restHighLevelClient.searchTemplate(request, RequestOptions.DEFAULT);
 		SearchHit[] hits = searchTemplateResponse.getResponse().getHits().getHits();
