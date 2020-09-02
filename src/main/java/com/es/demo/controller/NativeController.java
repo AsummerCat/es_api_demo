@@ -93,4 +93,17 @@ public class NativeController {
 		System.out.println("基于scroll进行滚动查询");
 	}
 
+
+	/**
+	 * 高亮查询
+	 * @throws IOException
+	 * @throws InvocationTargetException
+	 * @throws IllegalAccessException
+	 */
+	@RequestMapping("highlightQuery")
+	public void highlightQuery() throws IOException{
+		esService.highlightQuery();
+		System.out.println("高亮查询");
+	}
+
 }

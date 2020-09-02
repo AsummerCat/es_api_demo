@@ -18,13 +18,20 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.script.ScriptType;
+import org.elasticsearch.script.mustache.SearchTemplateRequest;
+import org.elasticsearch.script.mustache.SearchTemplateResponse;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,6 +41,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -199,7 +207,6 @@ public class EsService {
 				);
 
 
-
 		//构造更新的数据
 		bulkRequest.add(new UpdateRequest("user", "1")
 				.doc(XContentFactory.jsonBuilder()
@@ -220,7 +227,7 @@ public class EsService {
 						.startObject()
 						.field("age", 50)
 						.endObject()));
-         //批处理
+		//批处理
 		restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
 	}
 
@@ -231,17 +238,17 @@ public class EsService {
 	 */
 	public void bulkBatchDelete() throws IOException {
 		BulkRequest bulkRequest = new BulkRequest();
-		 //构造插入的数据
-        bulkRequest.add(new IndexRequest("user") //获取index
-		        //获取id
-		        .id("1")
-		        //构造field
-		        .source(XContentFactory.jsonBuilder()
-				        .startObject()
-				        .field("name", "小明")
-				        .field("age", 18)
-				        .endObject()
-		        ));
+		//构造插入的数据
+		bulkRequest.add(new IndexRequest("user") //获取index
+				//获取id
+				.id("1")
+				//构造field
+				.source(XContentFactory.jsonBuilder()
+						.startObject()
+						.field("name", "小明")
+						.field("age", 18)
+						.endObject()
+				));
 		//构造删除的数据
 		bulkRequest.add(new DeleteRequest("user", "1"));
 		bulkRequest.add(new DeleteRequest("user", "2"));
@@ -251,11 +258,11 @@ public class EsService {
 		for (BulkItemResponse item : items) {
 			String statueName = item.getResponse().getResult().name();
 			String id = item.getResponse().getId();
-			if("DELETED".equals(statueName)){
-				System.out.println("id-->"+id+"<--"+"删除成功");
+			if ("DELETED".equals(statueName)) {
+				System.out.println("id-->" + id + "<--" + "删除成功");
 			}
-			if("NOT_FOUND".equals(statueName)){
-				System.out.println("id-->"+id+"<--"+"删除失败 未找到相关数据");
+			if ("NOT_FOUND".equals(statueName)) {
+				System.out.println("id-->" + id + "<--" + "删除失败 未找到相关数据");
 			}
 		}
 	}
@@ -267,7 +274,7 @@ public class EsService {
 	public void scrollQuery() throws IOException, InvocationTargetException, IllegalAccessException {
 
 		//1.建立查询索引
-		SearchRequest searchRequest =new SearchRequest("user");
+		SearchRequest searchRequest = new SearchRequest("user");
 
 		//2.设置scroll的参数
 		Scroll scroll = new Scroll(timeValueMillis(100));
@@ -280,13 +287,13 @@ public class EsService {
 		//限制单次批量查询的条数
 		searchSourceBuilder.size(1); //设定每次返回多少条数据
 		//设置返回字段和排除字段
-		searchSourceBuilder.fetchSource(new String[]{"name","age","id"},null);
+		searchSourceBuilder.fetchSource(new String[]{"name", "age", "id"}, null);
 		//排序
 		searchSourceBuilder.sort("age", SortOrder.DESC);
 		searchRequest.source(searchSourceBuilder);
 
 		//4.进行搜索
-		SearchResponse searchResponse = restHighLevelClient.search(searchRequest,RequestOptions.DEFAULT);
+		SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
 		//获取到scrollId
 		String scrollId = searchResponse.getScrollId();
 		SearchHit[] hits = searchResponse.getHits().getHits();
@@ -299,7 +306,7 @@ public class EsService {
 			SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollId);
 			searchScrollRequest.scroll(scroll);
 
-			SearchResponse nextResponse = restHighLevelClient.scroll(searchScrollRequest,RequestOptions.DEFAULT);
+			SearchResponse nextResponse = restHighLevelClient.scroll(searchScrollRequest, RequestOptions.DEFAULT);
 			scrollId = nextResponse.getScrollId();
 			hits = nextResponse.getHits().getHits();
 			hitsList = Arrays.stream(hits).collect(Collectors.toList());
@@ -309,7 +316,7 @@ public class EsService {
 		//6.及时清除es快照，释放资源
 		ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
 		clearScrollRequest.addScrollId(scrollId);
-		boolean succeeded=restHighLevelClient.clearScroll(clearScrollRequest,RequestOptions.DEFAULT).isSucceeded();
+		boolean succeeded = restHighLevelClient.clearScroll(clearScrollRequest, RequestOptions.DEFAULT).isSucceeded();
 		System.out.println("succeeded:" + succeeded);
 
 		//7.最后获取到的数据进行遍历转义成对象
@@ -317,7 +324,7 @@ public class EsService {
 		for (SearchHit hit : resultSearchHit) {
 			Map<String, Object> sourceAsMap = hit.getSourceAsMap();
 			Person person = new Person();
-			BeanUtilsBean.getInstance().populate(person,sourceAsMap);
+			BeanUtilsBean.getInstance().populate(person, sourceAsMap);
 			adminLogs.add(person);
 		}
 
@@ -328,15 +335,75 @@ public class EsService {
 
 
 	/**
-	 ****************************************************************************************************************
-	 ************************************更多的搜索语法**************************************************************
-	 ************************************更多的搜索语法**************************************************************
-	 ************************************更多的搜索语法**************************************************************
-	 ****************************************************************************************************************
+	 * 基于temp模板进行搜索
 	 */
-	public void SearchMove(){
+	public void getSearchTemplate() throws IOException {
+		/**
+		 * 基于temp模板进行搜索
+		 */
+		SearchTemplateRequest request = new SearchTemplateRequest();
+		//调用模板名称
+		request.setScript("page_query_by_bard");
+		request.setScriptType(ScriptType.STORED);
+		//封装params参数
+		Map<String, Object> params = new HashMap<>();
+		params.put("key", "name");
+		params.put("value", "小明");
+		params.put("size", 5);
+		request.setScriptParams(params);
+		//搜索
+		SearchTemplateResponse searchTemplateResponse = restHighLevelClient.searchTemplate(request, RequestOptions.DEFAULT);
+		SearchHit[] hits = searchTemplateResponse.getResponse().getHits().getHits();
+		for (SearchHit hit : hits) {
+			System.out.println(hit.getSourceAsString());
+		}
+	}
+
+
+	/**
+	 * 高亮搜索
+	 */
+	public void highlightQuery() throws IOException {
 		//1.建立查询索引
-		SearchRequest searchRequest =new SearchRequest("user");
+		SearchRequest searchRequest = new SearchRequest("user");
+		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+		searchSourceBuilder.query(QueryBuilders.matchQuery("name", "小"));
+		//2.高亮搜索
+		HighlightBuilder highlightBuilder = new HighlightBuilder();
+		//设置高亮的字段
+		HighlightBuilder.Field highlightTitle = new HighlightBuilder.Field("name");
+		//字段高亮显示类型，默认用标签包裹高亮字词
+//		highlightTitle.highlighterType("unified");
+		highlightBuilder.field(highlightTitle);
+		searchSourceBuilder.highlighter(highlightBuilder);
+
+		//3.封装条件进入request
+		searchRequest.source(searchSourceBuilder);
+
+		//4.进行查询
+		SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+		SearchHits hits = searchResponse.getHits();
+		//获取高亮结果
+		for (SearchHit hit : hits.getHits()) {
+			Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+			HighlightField highlight = highlightFields.get("name");
+			Text[] fragments = highlight.fragments();
+			String fragmentString = fragments[0].string();
+			System.out.println("输出结果:" + fragmentString);
+		}
+	}
+
+
+	/**
+	 * ***************************************************************************************************************
+	 * ***********************************更多的搜索语法**************************************************************
+	 * ***********************************更多的搜索语法**************************************************************
+	 * ***********************************更多的搜索语法**************************************************************
+	 * ***************************************************************************************************************
+	 */
+	public void SearchMove() {
+		//1.建立查询索引
+		SearchRequest searchRequest = new SearchRequest("user");
 
 		//2.搜索语法
 		//封装查询条件
@@ -351,24 +418,33 @@ public class EsService {
 		searchSourceBuilder.query(QueryBuilders.termQuery("name", "小明"));
 
 
-        //bool语法查询
+		//bool语法查询
 		// 绑定查询条件
 		BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
 		// status字段为301或302
-		boolQueryBuilder.must(QueryBuilders.termsQuery("status.keyword", new String[]{"301","302"}));
+		boolQueryBuilder.must(QueryBuilders.termsQuery("status.keyword", new String[]{"301", "302"}));
 		// args字段包含786754748671257
-		boolQueryBuilder.must(QueryBuilders.matchPhraseQuery("args","786754748671257"));
+		boolQueryBuilder.must(QueryBuilders.matchPhraseQuery("args", "786754748671257"));
 		// 时间大于等于2020-05-21 00:00:00，小于2020-05-22 00:00:00
 		boolQueryBuilder.must(QueryBuilders.rangeQuery("@timestamp").gte(("2020-05-21 00:00:00")).lt(("2020-05-22 00:00:00")));
 		// 绑定bool query
 		searchSourceBuilder.query(boolQueryBuilder);
 
-        // 准确计数
+
+		//高亮搜索
+		HighlightBuilder highlightBuilder = new HighlightBuilder();
+		HighlightBuilder.Field highlightTitle = new HighlightBuilder.Field("title");
+		//字段高亮显示类型，默认用标签包裹高亮字词
+		highlightTitle.highlighterType("unified");
+		highlightBuilder.field(highlightTitle);
+		searchSourceBuilder.highlighter(highlightBuilder);
+
+		// 准确计数
 		searchSourceBuilder.trackTotalHits(true);
 		// 超时时间60s
 		searchSourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
 		//设置返回字段和排除字段
-		searchSourceBuilder.fetchSource(new String[]{"name","age","id"},null);
+		searchSourceBuilder.fetchSource(new String[]{"name", "age", "id"}, null);
 
 		//排序
 		searchSourceBuilder.sort("age", SortOrder.DESC);
@@ -388,7 +464,7 @@ public class EsService {
 
 		//5.进行搜索
 		try {
-			SearchResponse searchResponse = restHighLevelClient.search(searchRequest,RequestOptions.DEFAULT);
+			SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
 			SearchHit[] hits = searchResponse.getHits().getHits();
 			//获取返回值
 			List<SearchHit> hitsList = Arrays.stream(hits).collect(Collectors.toList());
@@ -398,7 +474,7 @@ public class EsService {
 			for (SearchHit hit : hitsList) {
 				Map<String, Object> sourceAsMap = hit.getSourceAsMap();
 				Person person = new Person();
-				BeanUtilsBean.getInstance().populate(person,sourceAsMap);
+				BeanUtilsBean.getInstance().populate(person, sourceAsMap);
 				adminLogs.add(person);
 			}
 		} catch (IOException | IllegalAccessException | InvocationTargetException e) {
