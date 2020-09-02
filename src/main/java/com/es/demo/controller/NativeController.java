@@ -17,28 +17,62 @@ public class NativeController {
 	@Autowired
 	private EsService esService;
 
-	@RequestMapping("findByName")
-	public void findByName() {
+
+
+	/**
+	 * 创建索引
+	 * @throws IOException
+	 */
+	@RequestMapping("createIndex")
+	public void createIndex() throws IOException {
+		esService.createIndex();
 	}
 
 	/**
-	 * 新增
+	 * 删除索引
+	 * @throws IOException
+	 */
+	@RequestMapping("deleteIndex")
+	public void deleteIndex() throws IOException {
+		esService.deleteIndex();
+	}
+
+	/**
+	 * 判断索引是否存在
+	 */
+
+	@RequestMapping("isIndexExists")
+	public void isIndexExists() throws IOException {
+		esService.isIndexExists();
+	}
+
+
+
+
+	/**
+	 * 新增数据 方式一 index语法
+	 * @throws IOException
+	 */
+	@RequestMapping("addDataForIndex")
+	public void addDataForIndex() throws IOException {
+		esService.addDataForIndex();
+	}
+	/**
+	 * 新增数据 方式二 upsert语法 不存在就新增,存在就更新
 	 * @throws IOException
 	 */
 	@RequestMapping("addData")
 	public void addData() throws IOException {
 		esService.addData();
-		System.out.println("插入成功");
 	}
 
 	/**
-	 * 更新
+	 * 更新数据
 	 * @throws IOException
 	 */
 	@RequestMapping("updateData")
 	public void save() throws IOException {
 		esService.updateData();
-		System.out.println("插入或更新成功");
 	}
 
 	/**
@@ -48,7 +82,6 @@ public class NativeController {
 	@RequestMapping("multiGetExists")
 	public void multiGetExists() throws IOException {
 		esService.multiGetExists();
-		System.out.println("一次性GET多条数据 不存在则为null");
 	}
 
 	/**
@@ -58,7 +91,6 @@ public class NativeController {
 	@RequestMapping("bulkBatchAdd")
 	public void bulkBatchAdd() throws IOException {
 		esService.bulkBatchAdd();
-		System.out.println("bulk批处理插入");
 	}
 
 	/**
@@ -68,7 +100,6 @@ public class NativeController {
 	@RequestMapping("bulkBatchUpdate")
 	public void bulkBatchUpdate() throws IOException {
 		esService.bulkBatchUpdate();
-		System.out.println("bulk批处理更新");
 	}
 
 	/**
@@ -78,7 +109,6 @@ public class NativeController {
 	@RequestMapping("bulkBatchDelete")
 	public void bulkBatchDelete() throws IOException {
 		esService.bulkBatchDelete();
-		System.out.println("bulk批处理删除");
 	}
 
 	/**
@@ -90,20 +120,16 @@ public class NativeController {
 	@RequestMapping("scrollQuery")
 	public void scrollQuery() throws IOException, InvocationTargetException, IllegalAccessException {
 		esService.scrollQuery();
-		System.out.println("基于scroll进行滚动查询");
 	}
 
 
 	/**
 	 * 高亮查询
 	 * @throws IOException
-	 * @throws InvocationTargetException
-	 * @throws IllegalAccessException
 	 */
 	@RequestMapping("highlightQuery")
 	public void highlightQuery() throws IOException{
 		esService.highlightQuery();
-		System.out.println("高亮查询");
 	}
 
 }
