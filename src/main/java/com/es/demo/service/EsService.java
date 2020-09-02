@@ -18,7 +18,9 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
@@ -322,5 +325,91 @@ public class EsService {
 		adminLogs.forEach(System.out::println);
 
 	}
+
+
+	/**
+	 ****************************************************************************************************************
+	 ************************************更多的搜索语法**************************************************************
+	 ************************************更多的搜索语法**************************************************************
+	 ************************************更多的搜索语法**************************************************************
+	 ****************************************************************************************************************
+	 */
+	public void SearchMove(){
+		//1.建立查询索引
+		SearchRequest searchRequest =new SearchRequest("user");
+
+		//2.搜索语法
+		//封装查询条件
+		SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+		//查询所有
+		searchSourceBuilder.query(QueryBuilders.matchAllQuery());
+
+		//match查询
+		searchSourceBuilder.query(QueryBuilders.matchQuery("name", "小明"));
+
+		//term查询
+		searchSourceBuilder.query(QueryBuilders.termQuery("name", "小明"));
+
+
+        //bool语法查询
+		// 绑定查询条件
+		BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+		// status字段为301或302
+		boolQueryBuilder.must(QueryBuilders.termsQuery("status.keyword", new String[]{"301","302"}));
+		// args字段包含786754748671257
+		boolQueryBuilder.must(QueryBuilders.matchPhraseQuery("args","786754748671257"));
+		// 时间大于等于2020-05-21 00:00:00，小于2020-05-22 00:00:00
+		boolQueryBuilder.must(QueryBuilders.rangeQuery("@timestamp").gte(("2020-05-21 00:00:00")).lt(("2020-05-22 00:00:00")));
+		// 绑定bool query
+		searchSourceBuilder.query(boolQueryBuilder);
+
+        // 准确计数
+		searchSourceBuilder.trackTotalHits(true);
+		// 超时时间60s
+		searchSourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
+		//设置返回字段和排除字段
+		searchSourceBuilder.fetchSource(new String[]{"name","age","id"},null);
+
+		//排序
+		searchSourceBuilder.sort("age", SortOrder.DESC);
+
+		//设定每次返回多少条数据
+		searchSourceBuilder.size(1);
+
+
+		/**
+		 * *********************************************
+		 * ************封装request+查询*****************
+		 * *********************************************
+		 */
+		//4.将查询内容封装request
+		searchRequest.source(searchSourceBuilder);
+
+
+		//5.进行搜索
+		try {
+			SearchResponse searchResponse = restHighLevelClient.search(searchRequest,RequestOptions.DEFAULT);
+			SearchHit[] hits = searchResponse.getHits().getHits();
+			//获取返回值
+			List<SearchHit> hitsList = Arrays.stream(hits).collect(Collectors.toList());
+			//7.最后获取到的数据进行遍历转义成对象
+			ArrayList<Person> adminLogs = new ArrayList<>();
+			//根据返回值转换为实体类
+			for (SearchHit hit : hitsList) {
+				Map<String, Object> sourceAsMap = hit.getSourceAsMap();
+				Person person = new Person();
+				BeanUtilsBean.getInstance().populate(person,sourceAsMap);
+				adminLogs.add(person);
+			}
+		} catch (IOException | IllegalAccessException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
+		/**
+		 * *********************************************
+		 * ************封装request+查询*****************
+		 * *********************************************
+		 */
+	}
+
 }
 
